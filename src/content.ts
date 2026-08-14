@@ -20,6 +20,7 @@ declare function cloneInto<T>(
 ): T;
 
 type PlaylistRendererData = {
+  setVideoId?: string;
   publishedTimeText?: {
     simpleText?: string;
     accessibility?: { accessibilityData?: { label?: string } };
@@ -215,7 +216,41 @@ function pageWindow(): Window & { ytcfg?: YtCfg } {
   return view.wrappedJSObject ?? view;
 }
 
-async function removeViaPlaylistEdit(videoId: string): Promise<boolean> {
+function findSetVideoId(value: unknown, depth = 0): string | null {
+  if (depth > 8 || !value || typeof value !== "object") return null;
+  const rec = value as Record<string, unknown>;
+  if (typeof rec.setVideoId === "string" && rec.setVideoId.length > 4) return rec.setVideoId;
+  for (const child of Object.values(rec)) {
+    const found = findSetVideoId(child, depth + 1);
+    if (found) return found;
+  }
+  return null;
+}
+
+async function sha1Hex(text: string): Promise<string> {
+  const bytes = new TextEncoder().encode(text);
+  const digest = await crypto.subtle.digest("SHA-1", bytes);
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function sapisidAuthorization(): Promise<string | null> {
+  const sapisid =
+    document.cookie.match(/(?:^|;\s*)SAPISID=([^;]+)/)?.[1] ||
+    document.cookie.match(/(?:^|;\s*)__Secure-3PAPISID=([^;]+)/)?.[1];
+  if (!sapisid) return null;
+  const timestamp = Math.floor(Date.now() / 1000);
+  const hash = await sha1Hex(`${timestamp} ${sapisid} ${location.origin}`);
+  return `SAPISIDHASH ${timestamp}_${hash}`;
+}
+
+function playlistEditSucceeded(body: unknown): boolean {
+  if (!body || typeof body !== "object") return false;
+  const rec = body as { error?: unknown; status?: string };
+  if (rec.error) return false;
+  return rec.status === "STATUS_SUCCEEDED";
+}
+
+async function removeViaPlaylistEdit(video: HTMLElement, videoId: string): Promise<boolean> {
   if (!isWatchLaterUrl(location.href)) return false;
   try {
     const ytcfg = pageWindow().ytcfg;
@@ -223,24 +258,44 @@ async function removeViaPlaylistEdit(videoId: string): Promise<boolean> {
     const context = ytcfg?.get("INNERTUBE_CONTEXT");
     if (typeof key !== "string" || !context) return false;
 
-    const url = `https://www.youtube.com/youtubei/v1/browse/edit_playlist?prettyPrint=false&key=${encodeURIComponent(key)}`;
+    const plainContext = JSON.parse(JSON.stringify(context)) as {
+      client?: { visitorData?: string; clientVersion?: string };
+    };
+    const setVideoId = findSetVideoId(rendererData(video));
+    const action = setVideoId
+      ? { action: "ACTION_REMOVE_VIDEO", setVideoId, removedVideoId: videoId }
+      : { action: "ACTION_REMOVE_VIDEO_BY_VIDEO_ID", removedVideoId: videoId };
+
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      "X-YouTube-Client-Name": "1",
+      "X-YouTube-Client-Version": String(plainContext.client?.clientVersion ?? ""),
+    };
+    if (plainContext.client?.visitorData) {
+      headers["X-Goog-Visitor-Id"] = plainContext.client.visitorData;
+    }
+    const authorization = await sapisidAuthorization();
+    if (authorization) headers.Authorization = authorization;
+
+    const url = `${location.origin}/youtubei/v1/browse/edit_playlist?prettyPrint=false&key=${encodeURIComponent(key)}`;
     const init = {
       method: "POST",
       credentials: "same-origin" as const,
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({
-        context: JSON.parse(JSON.stringify(context)),
+        context: plainContext,
         playlistId: "WL",
-        actions: [
-          { action: "ACTION_REMOVE_VIDEO_BY_VIDEO_ID", removedVideoId: videoId },
-        ],
+        actions: [action],
       }),
     };
 
     const page = pageWindow();
     const request = typeof cloneInto === "function" ? cloneInto(init, page) : init;
     const response = await page.fetch(url, request);
-    return Boolean(response?.ok);
+    if (!response?.ok) return false;
+    const raw = await response.text();
+    const parsed: unknown = JSON.parse(String(raw));
+    return playlistEditSucceeded(parsed);
   } catch {
     return false;
   }
@@ -257,8 +312,8 @@ async function waitGone(videoId: string): Promise<boolean> {
 
 async function removeFromWatchLater(video: HTMLElement, videoId: string): Promise<void> {
   if (!isWatchLaterUrl(location.href)) throw new Error("Left Watch Later.");
-  if (await removeViaPlaylistEdit(videoId)) {
-    video.remove();
+  if (await removeViaPlaylistEdit(video, videoId)) {
+    if (!(await waitGone(videoId))) video.remove();
     return;
   }
   await clickRemove(video, videoId);
