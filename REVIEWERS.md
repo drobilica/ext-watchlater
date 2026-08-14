@@ -29,7 +29,7 @@ Desktop Firefox only. Not supported on Android. There is no `gecko_android` key.
 
 Environment used to produce the submitted XPI:
 
-- Node.js 22.x
+- Current Node.js LTS (CI uses `lts/*`)
 - pnpm 10.15.0 (see `packageManager` in `package.json`)
 
 ```bash

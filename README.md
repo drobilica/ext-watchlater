@@ -25,7 +25,7 @@ Removals cannot be undone.
 
 ## Build
 
-Node 22 and [pnpm](https://pnpm.io) 10.
+Current Node.js LTS and [pnpm](https://pnpm.io) 10.
 
 ```bash
 pnpm install
