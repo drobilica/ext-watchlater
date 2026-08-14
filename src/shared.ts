@@ -15,7 +15,8 @@ export type IncomingMessage =
   | { type: "ytc-status" }
   | { type: "ytc-stop" }
   | { type: "ytc-set-months"; months: number }
-  | { type: "ytc-start"; months?: number };
+  | { type: "ytc-start"; months?: number }
+  | { type: "ytc-badge"; count: number | null };
 
 export function isMonths(value: number): value is Months {
   return (MONTHS as readonly number[]).includes(value);

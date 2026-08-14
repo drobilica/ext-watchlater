@@ -17,9 +17,8 @@
 
 html,
 body {
-  width: 100%;
-  min-width: 280px;
-  height: 100%;
+  width: 320px;
+  height: 432px;
   margin: 0;
   overflow: hidden;
   font-family: "Segoe UI", system-ui, sans-serif;
@@ -34,9 +33,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  width: 100%;
-  height: 100%;
-  min-height: 432px;
+  width: 320px;
+  height: 432px;
   padding: 16px;
 }
 

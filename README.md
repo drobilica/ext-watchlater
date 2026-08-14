@@ -4,7 +4,7 @@ Firefox add-on that removes videos from YouTube **Watch Later** when the video i
 
 YouTube does not show when you saved a video. This uses the **upload date** on each row. It clicks YouTube’s own **Remove from Watch later** control. Nothing is sent off your machine.
 
-The only UI is the **Firefox sidebar** (toolbar icon toggles it). Nothing is drawn on the YouTube page.
+The only UI is the **toolbar popup**. Nothing is drawn on the YouTube page. While a run is active, the toolbar icon shows a uBlock-style count for that run only.
 
 Desktop Firefox 140+ only. YouTube UI must be in English. Not for Android, and it does not unlike videos.
 
@@ -15,13 +15,13 @@ The add-on is unsigned until it is listed or self-distributed from AMO.
 1. Build with `pnpm xpi` (see below), or grab a release XPI when one exists.
 2. Firefox → `about:debugging#/runtime/this-firefox`
 3. **Load Temporary Add-on…** → `dist/clear-watch-later.xpi`
-4. Open [Watch Later](https://www.youtube.com/playlist?list=WL), then click the toolbar icon to open the sidebar.
+4. Open [Watch Later](https://www.youtube.com/playlist?list=WL), then click the toolbar icon.
 
 Restarting Firefox unloads a temporary add-on. Load the file again to continue.
 
 ## Use
 
-Click the toolbar icon to open the sidebar. Pick **6 / 12 / 24 mo**, then **Start**. The same button becomes **Stop**. The last five removed titles stay in the list.
+Click the toolbar icon. Pick **6 / 12 / 24 mo**, then **Start**. The same button becomes **Stop**. The last five removed titles stay in the list. The icon badge is the count for this run and disappears when the run ends.
 
 Removals cannot be undone. Leave the Watch Later tab focused while it runs.
 

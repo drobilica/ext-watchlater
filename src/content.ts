@@ -259,6 +259,12 @@ function setLine(text: string): void {
   state.line = text;
 }
 
+function reportBadge(count: number | null): void {
+  void extApi.runtime.sendMessage({ type: "ytc-badge", count }).catch(() => {
+    /* popup-only session; badge page may be asleep */
+  });
+}
+
 async function scrollForMore(previousCount: number): Promise<boolean> {
   const videos = getVideos();
   const last = videos[videos.length - 1];
@@ -294,6 +300,7 @@ async function startRun(months: Months): Promise<void> {
   state.months = months;
   state.removed = 0;
   setLine("Starting…");
+  reportBadge(0);
   await acquireWakeLock();
 
   let emptyScrolls = 0;
@@ -316,6 +323,7 @@ async function startRun(months: Months): Promise<void> {
           remember(title);
           state.removed += 1;
           misses = 0;
+          reportBadge(state.removed);
           setLine(`${state.removed} removed`);
         } catch (err) {
           misses += 1;
@@ -348,6 +356,7 @@ async function startRun(months: Months): Promise<void> {
     setLine(err instanceof Error ? err.message : String(err));
   } finally {
     state.running = false;
+    reportBadge(null);
     await releaseWakeLock();
   }
 }

@@ -1,7 +1,7 @@
 {
   "name": "ext-watchlater",
   "private": true,
-  "version": "2.7.0",
+  "version": "2.8.0",
   "description": "WatchLater Cleaner for YT — remove old videos from YouTube Watch Later.",
   "license": "MIT",
   "repository": {
