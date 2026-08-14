@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Clear Watch Later",
-  "version": "2.5.0",
-  "description": "Remove Watch Later videos posted more than 6, 12, or 24 months ago.",
+  "name": "WatchLater Cleaner for YT",
+  "version": "2.6.0",
+  "description": "Remove old videos from YouTube Watch Later. Toolbar popup only.",
   "browser_specific_settings": {
     "gecko": {
       "id": "clear-watch-later@yt-cleanup",
@@ -17,7 +17,7 @@
     "96": "icons/icon.svg"
   },
   "action": {
-    "default_title": "Clear Watch Later",
+    "default_title": "WatchLater Cleaner for YT",
     "default_popup": "src/popup.html",
     "default_icon": {
       "48": "icons/icon.svg"

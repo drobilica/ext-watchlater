@@ -1,4 +1,3 @@
-import panelCss from "./panel.css?inline";
 import {
   type IncomingMessage,
   type Months,
@@ -6,10 +5,8 @@ import {
   extApi,
   isMonths,
   isWatchLaterUrl,
-  WL_URL,
 } from "./shared";
 
-const HOST_ID = "ytc-root";
 const DELAY_MS = 1300;
 const MENU_WAIT_MS = 350;
 const SCROLL_WAIT_MS = 900;
@@ -31,16 +28,6 @@ type PageVideo = HTMLElement & {
   };
 };
 
-type Ui = {
-  host: HTMLDivElement;
-  title: HTMLElement;
-  choices: HTMLButtonElement[];
-  action: HTMLButtonElement;
-  status: HTMLElement;
-  wake: HTMLElement;
-  pills: HTMLLIElement[];
-};
-
 const state = {
   running: false,
   stop: false,
@@ -50,10 +37,7 @@ const state = {
   wakeLock: null as WakeLockSentinel | null,
   wakeOn: false,
   line: "Pick a window, then Start.",
-  hidden: false,
 };
-
-let ui: Ui | null = null;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => {
@@ -239,7 +223,6 @@ async function acquireWakeLock(): Promise<void> {
     state.wakeOn = true;
     state.wakeLock.addEventListener("release", () => {
       state.wakeOn = false;
-      paint();
     });
   } catch {
     state.wakeLock = null;
@@ -272,183 +255,8 @@ function snapshot(): RuntimeStatus {
   };
 }
 
-function el<K extends keyof HTMLElementTagNameMap>(
-  tag: K,
-  options: {
-    className?: string;
-    text?: string;
-    attrs?: Record<string, string>;
-  } = {},
-  kids: HTMLElement[] = [],
-): HTMLElementTagNameMap[K] {
-  const node = document.createElement(tag);
-  if (options.className) node.className = options.className;
-  if (options.text !== undefined) node.textContent = options.text;
-  if (options.attrs) {
-    for (const [key, value] of Object.entries(options.attrs)) {
-      node.setAttribute(key, value);
-    }
-  }
-  for (const kid of kids) node.append(kid);
-  return node;
-}
-
-function monthButton(months: Months, selected: boolean): HTMLButtonElement {
-  return el("button", {
-    className: selected ? "month is-on" : "month",
-    text: `${months} mo`,
-    attrs: {
-      type: "button",
-      "data-months": String(months),
-      "aria-pressed": String(selected),
-    },
-  });
-}
-
-function mount(): Ui {
-  if (ui) return ui;
-
-  const host = document.createElement("div");
-  host.id = HOST_ID;
-  host.style.position = "fixed";
-  host.style.top = "80px";
-  host.style.right = "16px";
-  host.style.zIndex = "2147483646";
-  host.style.width = "320px";
-  host.style.height = "432px";
-
-  const shadow = host.attachShadow({ mode: "open" });
-  const style = document.createElement("style");
-  style.textContent = panelCss;
-
-  const hide = el("button", {
-    className: "hide",
-    text: "×",
-    attrs: { type: "button", "data-act": "hide", "aria-label": "Hide" },
-  });
-  const title = el("h1", {
-    className: "title",
-    text: "Remove videos posted more than",
-  });
-  const months = el(
-    "div",
-    { className: "months", attrs: { role: "radiogroup", "aria-label": "Age in months" } },
-    [monthButton(6, true), monthButton(12, false), monthButton(24, false)],
-  );
-  const action = el("button", {
-    className: "action",
-    text: "Start",
-    attrs: { type: "button", "data-act": "action" },
-  });
-  const status = el("p", { className: "status" });
-  const wake = el("p", { className: "wake" });
-  const pills = [0, 1, 2, 3, 4].map(() =>
-    el("li", { className: "gone is-empty" }),
-  );
-  const frame = el(
-    "section",
-    { className: "frame", attrs: { "aria-label": "Clear Watch Later" } },
-    [
-      el("div", { className: "head" }, [
-        el("p", { className: "kicker", text: "Watch Later" }),
-        hide,
-      ]),
-      title,
-      months,
-      action,
-      el("div", { className: "meta" }, [status, wake]),
-      el("ul", { className: "pills", attrs: { "aria-label": "Last removed" } }, pills),
-    ],
-  );
-
-  shadow.append(style, frame);
-
-  shadow.addEventListener("click", (event) => {
-    const target = event.target;
-    if (!(target instanceof Element)) return;
-    const hide = target.closest("[data-act='hide']");
-    const action = target.closest("[data-act='action']");
-    const choice = target.closest("[data-months]");
-    if (hide) {
-      state.hidden = true;
-      paint();
-      return;
-    }
-    if (choice instanceof HTMLElement && !state.running) {
-      const next = Number(choice.getAttribute("data-months"));
-      if (isMonths(next)) state.months = next;
-      paint();
-      return;
-    }
-    if (action) {
-      const mode = mount().action.dataset.mode;
-      if (mode === "open") {
-        location.assign(WL_URL);
-        return;
-      }
-      if (mode === "stop") {
-        state.stop = true;
-        return;
-      }
-      if (mode === "start") void startRun(state.months);
-    }
-  });
-
-  document.documentElement.appendChild(host);
-  ui = {
-    host,
-    title: shadow.querySelector(".title") as HTMLElement,
-    choices: [...shadow.querySelectorAll<HTMLButtonElement>("[data-months]")],
-    action: shadow.querySelector("[data-act='action']") as HTMLButtonElement,
-    status: shadow.querySelector(".status") as HTMLElement,
-    wake: shadow.querySelector(".wake") as HTMLElement,
-    pills: [...shadow.querySelectorAll<HTMLLIElement>(".gone")],
-  };
-  return ui;
-}
-
-function paint(): void {
-  if (!isWatchLaterUrl(location.href)) {
-    teardown();
-    return;
-  }
-  const view = mount();
-  view.host.hidden = state.hidden && !state.running;
-
-  view.title.textContent = "Remove videos posted more than";
-
-  for (const button of view.choices) {
-    const value = Number(button.getAttribute("data-months"));
-    const on = value === state.months;
-    button.classList.toggle("is-on", on);
-    button.setAttribute("aria-pressed", String(on));
-    button.disabled = state.running;
-  }
-
-  if (state.running) {
-    view.action.textContent = "Stop";
-    view.action.dataset.mode = "stop";
-  } else {
-    view.action.textContent = "Start";
-    view.action.dataset.mode = "start";
-  }
-
-  view.status.textContent = state.line;
-  view.wake.textContent = state.wakeOn
-    ? "Screen stay-awake is on"
-    : "Keep this tab focused so the PC does not sleep";
-  view.wake.classList.toggle("is-on", state.wakeOn);
-
-  for (let i = 0; i < view.pills.length; i += 1) {
-    const title = state.recent[i] ?? "";
-    view.pills[i].textContent = title;
-    view.pills[i].classList.toggle("is-empty", !title);
-  }
-}
-
 function setLine(text: string): void {
   state.line = text;
-  paint();
 }
 
 async function scrollForMore(previousCount: number): Promise<boolean> {
@@ -477,7 +285,7 @@ function nextTarget(months: Months): HTMLElement | null {
 async function startRun(months: Months): Promise<void> {
   if (state.running) return;
   if (!isWatchLaterUrl(location.href)) {
-    location.assign(WL_URL);
+    setLine("Open Watch Later, then press Start.");
     return;
   }
 
@@ -485,10 +293,8 @@ async function startRun(months: Months): Promise<void> {
   state.stop = false;
   state.months = months;
   state.removed = 0;
-  state.hidden = false;
   setLine("Starting…");
   await acquireWakeLock();
-  paint();
 
   let emptyScrolls = 0;
   let misses = 0;
@@ -543,30 +349,18 @@ async function startRun(months: Months): Promise<void> {
   } finally {
     state.running = false;
     await releaseWakeLock();
-    paint();
   }
 }
 
-function teardown(): void {
-  if (state.running) state.stop = true;
-  ui?.host.remove();
-  ui = null;
-}
-
-function onNavigate(): void {
-  if (!isWatchLaterUrl(location.href)) {
-    teardown();
-    return;
-  }
-  state.hidden = false;
-  paint();
-}
-
-document.addEventListener("yt-navigate-finish", onNavigate);
-document.addEventListener("yt-page-data-updated", onNavigate);
+document.addEventListener("yt-navigate-finish", () => {
+  if (!isWatchLaterUrl(location.href) && state.running) state.stop = true;
+});
+document.addEventListener("yt-page-data-updated", () => {
+  if (!isWatchLaterUrl(location.href) && state.running) state.stop = true;
+});
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible" && state.running && !state.wakeOn) {
-    void acquireWakeLock().then(paint);
+    void acquireWakeLock();
   }
 });
 
@@ -584,7 +378,6 @@ extApi.runtime.onMessage.addListener(
     }
     if (message.type === "ytc-set-months") {
       if (isMonths(message.months)) state.months = message.months;
-      paint();
       sendResponse({ ok: true });
       return;
     }
@@ -595,5 +388,3 @@ extApi.runtime.onMessage.addListener(
     }
   },
 );
-
-if (isWatchLaterUrl(location.href)) paint();

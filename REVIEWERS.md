@@ -2,7 +2,9 @@
 
 ## What this add-on does
 
-It removes videos from the signed-in user’s **YouTube Watch Later** playlist when the video’s **upload date** is older than 6, 12, or 24 months.
+**WatchLater Cleaner for YT** removes videos from the signed-in user’s **YouTube Watch Later** playlist when the video’s **upload date** is older than 6, 12, or 24 months.
+
+The UI is the toolbar popup only. The content script does not inject a page overlay.
 
 It does this by clicking YouTube’s own playlist ⋮ → **Remove from Watch later** control. It does not call the YouTube Data API, does not send data off the device, and does not unlike videos.
 
@@ -13,7 +15,7 @@ Desktop Firefox only. Not supported on Android. There is no `gecko_android` key.
 ## Permissions
 
 - `host_permissions` / content script: `https://www.youtube.com/playlist*` only.
-- The panel is mounted only when `list=WL`.
+- Content script runs on playlist pages and only acts when `list=WL`. No page overlay.
 - `browser_specific_settings.gecko.data_collection_permissions.required` is `["none"]`.
 
 ## How to test
@@ -21,9 +23,9 @@ Desktop Firefox only. Not supported on Android. There is no `gecko_android` key.
 1. Firefox 140+ (desktop), signed into YouTube.
 2. Set YouTube language to English.
 3. Open `https://www.youtube.com/playlist?list=WL`.
-4. The panel should appear only on that playlist, not on Home or Watch.
-5. Choose **6 mo**, press **Start**. **Stop** must halt further removals.
-6. Confirm a removed title appears in the reserved list under the button.
+4. No extra UI should appear on the playlist page.
+5. Click the toolbar icon. Choose **6 mo**, press **Start**. **Stop** must halt further removals.
+6. Confirm a removed title appears in the popup list.
 
 ## How to reproduce the build
 

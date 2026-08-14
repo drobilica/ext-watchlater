@@ -1,8 +1,8 @@
 {
   "name": "ext-watchlater",
   "private": true,
-  "version": "2.5.0",
-  "description": "Firefox add-on that removes old videos from YouTube Watch Later.",
+  "version": "2.6.0",
+  "description": "WatchLater Cleaner for YT — remove old videos from YouTube Watch Later.",
   "license": "MIT",
   "repository": {
     "type": "git",
