@@ -1,0 +1,39 @@
+{
+  "name": "ext-watchlater",
+  "private": true,
+  "version": "2.5.0",
+  "description": "Firefox add-on that removes old videos from YouTube Watch Later.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/drobilica/ext-watchlater.git"
+  },
+  "bugs": {
+    "url": "https://github.com/drobilica/ext-watchlater/issues"
+  },
+  "homepage": "https://github.com/drobilica/ext-watchlater#readme",
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "lint:css": "stylelint \"src/**/*.css\"",
+    "lint:amo": "addons-linter build/extension --min-manifest-version 3 --max-manifest-version 3",
+    "xpi": "pnpm build && python3 pack.py && pnpm lint:amo"
+  },
+  "packageManager": "pnpm@10.15.0",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  },
+  "devDependencies": {
+    "@types/firefox-webext-browser": "^120.0.4",
+    "addons-linter": "^10.10.0",
+    "stylelint": "^16.23.0",
+    "stylelint-config-recess-order": "^6.1.0",
+    "stylelint-config-standard": "^38.0.0",
+    "stylelint-order": "^6.0.4",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.3",
+    "vite-plugin-web-extension": "^4.4.5"
+  }
+}

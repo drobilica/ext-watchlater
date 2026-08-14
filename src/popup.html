@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=320">
+    <title>Clear Watch Later</title>
+    <link rel="stylesheet" href="./popup.css">
+  </head>
+  <body>
+    <main class="sheet">
+      <div class="head">
+        <p class="kicker">Watch Later</p>
+      </div>
+      <h1 class="title" data-el="title">Remove videos posted more than</h1>
+      <div class="months" role="radiogroup" aria-label="Age in months" data-el="choices">
+        <button type="button" class="month is-on" data-months="6" aria-pressed="true">6 mo</button>
+        <button type="button" class="month" data-months="12" aria-pressed="false">12 mo</button>
+        <button type="button" class="month" data-months="24" aria-pressed="false">24 mo</button>
+      </div>
+      <button type="button" class="action" data-el="action">Start</button>
+      <div class="meta">
+        <p class="status" data-el="status">Pick a window, then Start.</p>
+        <p class="wake" data-el="wake">Keep this YouTube tab focused so the PC does not sleep</p>
+      </div>
+      <ul class="pills" aria-label="Last removed">
+        <li class="gone is-empty"></li>
+        <li class="gone is-empty"></li>
+        <li class="gone is-empty"></li>
+        <li class="gone is-empty"></li>
+        <li class="gone is-empty"></li>
+      </ul>
+    </main>
+    <script type="module" src="./popup.ts"></script>
+  </body>
+</html>
