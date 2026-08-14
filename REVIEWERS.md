@@ -4,7 +4,7 @@
 
 **WatchLater Cleaner for YT** removes videos from the signed-in user’s **YouTube Watch Later** playlist when the video’s **upload date** is older than 6, 12, or 24 months.
 
-The UI is the toolbar popup only. The content script does not inject a page overlay.
+The UI is the Firefox sidebar (toggled from the toolbar button). The content script does not inject a page overlay. There is no second popup.
 
 It does this by clicking YouTube’s own playlist ⋮ → **Remove from Watch later** control. It does not call the YouTube Data API, does not send data off the device, and does not unlike videos.
 
@@ -24,8 +24,8 @@ Desktop Firefox only. Not supported on Android. There is no `gecko_android` key.
 2. Set YouTube language to English.
 3. Open `https://www.youtube.com/playlist?list=WL`.
 4. No extra UI should appear on the playlist page.
-5. Click the toolbar icon. Choose **6 mo**, press **Start**. **Stop** must halt further removals.
-6. Confirm a removed title appears in the popup list.
+5. Click the toolbar icon to open the sidebar. Choose **6 mo**, press **Start**. **Stop** must halt further removals.
+6. Confirm a removed title appears in the sidebar list.
 
 ## How to reproduce the build
 

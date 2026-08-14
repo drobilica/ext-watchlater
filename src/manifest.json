@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "WatchLater Cleaner for YT",
-  "version": "2.6.0",
-  "description": "Remove old videos from YouTube Watch Later. Toolbar popup only.",
+  "version": "2.7.0",
+  "description": "Remove old videos from YouTube Watch Later.",
   "browser_specific_settings": {
     "gecko": {
       "id": "clear-watch-later@yt-cleanup",
@@ -18,10 +18,20 @@
   },
   "action": {
     "default_title": "WatchLater Cleaner for YT",
-    "default_popup": "src/popup.html",
     "default_icon": {
       "48": "icons/icon.svg"
     }
+  },
+  "sidebar_action": {
+    "default_title": "WatchLater Cleaner for YT",
+    "default_panel": "src/ui.html",
+    "default_icon": {
+      "48": "icons/icon.svg"
+    },
+    "open_at_install": false
+  },
+  "background": {
+    "scripts": ["src/background.ts"]
   },
   "host_permissions": ["https://www.youtube.com/playlist*"],
   "content_scripts": [
