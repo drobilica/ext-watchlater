@@ -1,3 +1,4 @@
+import { olderThanMonths, parseAgeDays } from "./age";
 import {
   type IncomingMessage,
   type Months,
@@ -7,9 +8,10 @@ import {
   isWatchLaterUrl,
 } from "./shared";
 
-const DELAY_MS = 1300;
+const DELAY_MS = 1400;
 const MENU_WAIT_MS = 350;
-const SCROLL_WAIT_MS = 900;
+const SCROLL_WAIT_MS = 800;
+const GONE_WAIT_MS = 2500;
 
 type PlaylistRendererData = {
   publishedTimeText?: {
@@ -84,31 +86,18 @@ function rendererData(video: HTMLElement): PlaylistRendererData | null {
   }
 }
 
-function parseAgeDays(text: string): number | null {
-  const lower = text.replace(/\s+/g, " ").trim().toLowerCase();
-  if (/just now|\btoday\b/.test(lower) && !/\d+\s+(day|week|month|year)/.test(lower)) {
-    return 0;
+function videoIdOf(video: HTMLElement): string | null {
+  const href =
+    video.querySelector<HTMLAnchorElement>("a[href*='watch?v=']")?.href ??
+    video.querySelector<HTMLAnchorElement>("a#video-title")?.href ??
+    "";
+  if (!href) return null;
+  try {
+    return new URL(href, location.origin).searchParams.get("v");
+  } catch {
+    const match = href.match(/[?&]v=([^&]+)/);
+    return match ? decodeURIComponent(match[1]) : null;
   }
-  if (/\byesterday\b/.test(lower)) return 1;
-
-  const rel = lower.match(/(\d+)\s+(second|minute|hour|day|week|month|year)s?\s+ago/);
-  if (rel) {
-    const n = Number(rel[1]);
-    const unit = rel[2];
-    if (unit === "second" || unit === "minute" || unit === "hour") return 0;
-    if (unit === "day") return n;
-    if (unit === "week") return n * 7;
-    if (unit === "month") return n * 30;
-    if (unit === "year") return n * 365;
-  }
-
-  const abs = Date.parse(
-    text.replace(/^(streamed|premiered|uploaded|published)\s+/i, "").replace(/.*•\s*/, ""),
-  );
-  if (!Number.isNaN(abs) && abs < Date.now() && abs > Date.parse("2005-01-01")) {
-    return Math.max(0, Math.floor((Date.now() - abs) / 86400000));
-  }
-  return null;
 }
 
 function collectDateTexts(video: HTMLElement): string[] {
@@ -142,41 +131,59 @@ function collectDateTexts(video: HTMLElement): string[] {
   return texts;
 }
 
-function uploadAgeDays(video: HTMLElement): number | null {
-  for (const text of collectDateTexts(video)) {
-    const days = parseAgeDays(text);
-    if (days != null) return days;
-  }
-  return null;
-}
+const ageCache = new Map<string, number | null>();
+const skipIds = new Set<string>();
 
-function olderThanMonths(ageDays: number, months: Months): boolean {
-  const cutoff = new Date();
-  cutoff.setMonth(cutoff.getMonth() - months);
-  return Date.now() - ageDays * 86400000 <= cutoff.getTime();
+function uploadAgeDays(video: HTMLElement): number | null {
+  const id = videoIdOf(video);
+  if (id && ageCache.has(id)) return ageCache.get(id) ?? null;
+  let days: number | null = null;
+  for (const text of collectDateTexts(video)) {
+    days = parseAgeDays(text);
+    if (days != null) break;
+  }
+  if (id) ageCache.set(id, days);
+  return days;
 }
 
 function closeMenus(): void {
   document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
 }
 
+function menuIconType(el: Element): string {
+  try {
+    const raw = (el as PageVideo).wrappedJSObject ?? (el as PageVideo);
+    const data = raw.data as { icon?: { iconType?: string } } | undefined;
+    return data?.icon?.iconType ?? "";
+  } catch {
+    return "";
+  }
+}
+
 function findRemoveItem(): HTMLElement | null {
+  if (!isWatchLaterUrl(location.href)) return null;
   const scopes = $$(
     "ytd-menu-popup-renderer, tp-yt-iron-dropdown:not([aria-hidden='true']), [role='menu']",
   );
   const hay = scopes.flatMap((scope) =>
     $$(
-      "ytd-menu-service-item-renderer, tp-yt-paper-item, yt-list-item-view-model, [role='menuitem'], button, yt-formatted-string",
+      "ytd-menu-service-item-renderer, tp-yt-paper-item, yt-list-item-view-model, [role='menuitem'], button",
       scope,
     ),
   );
-  const hit = hay.find((el) => {
-    if (!visible(el) && el instanceof HTMLElement && el.offsetHeight === 0) return false;
+  const usable: HTMLElement[] = [];
+  for (const el of hay) {
+    if (!(el instanceof HTMLElement)) continue;
+    if (el.offsetParent === null && el.offsetHeight === 0) continue;
     const text = (el.textContent || "").replace(/\s+/g, " ").trim();
-    if (text.length > 80) return false;
-    return /^remove from/i.test(text) || /remove from watch later/i.test(text);
-  });
-  return hit instanceof HTMLElement ? hit : null;
+    if (text.length === 0 || text.length >= 80) continue;
+    usable.push(el);
+  }
+  const byLater = usable.find((el) => /watch later/i.test(el.textContent || ""));
+  if (byLater) return byLater;
+  const byIcon = usable.find((el) => menuIconType(el) === "PLAYLIST_REMOVE");
+  if (byIcon) return byIcon;
+  return usable.find((el) => /^remove from/i.test((el.textContent || "").trim())) ?? null;
 }
 
 function menuButton(video: HTMLElement): HTMLElement | null {
@@ -195,7 +202,17 @@ function menuButton(video: HTMLElement): HTMLElement | null {
   return button instanceof HTMLElement ? button : null;
 }
 
-async function clickRemove(video: HTMLElement): Promise<void> {
+async function waitGone(videoId: string): Promise<boolean> {
+  const deadline = Date.now() + GONE_WAIT_MS;
+  while (Date.now() < deadline) {
+    if (!getVideos().some((row) => videoIdOf(row) === videoId)) return true;
+    await sleep(150);
+  }
+  return false;
+}
+
+async function clickRemove(video: HTMLElement, videoId: string): Promise<void> {
+  if (!isWatchLaterUrl(location.href)) throw new Error("Left Watch Later.");
   closeMenus();
   await sleep(120);
   const button = menuButton(video);
@@ -210,9 +227,12 @@ async function clickRemove(video: HTMLElement): Promise<void> {
   }
   if (!item) {
     closeMenus();
-    throw new Error('No "Remove from …" item. Switch YouTube to English.');
+    throw new Error('No "Remove from Watch later" item.');
   }
   item.click();
+  if (!(await waitGone(videoId))) {
+    throw new Error("Video did not leave Watch Later.");
+  }
 }
 
 async function acquireWakeLock(): Promise<void> {
@@ -266,24 +286,23 @@ function reportBadge(count: number | null): void {
 }
 
 async function scrollForMore(previousCount: number): Promise<boolean> {
-  const videos = getVideos();
-  const last = videos[videos.length - 1];
-  last?.scrollIntoView({ block: "end", inline: "nearest" });
+  const last = getVideos().at(-1);
+  last?.scrollIntoView({ block: "nearest", inline: "nearest" });
   const scroller =
-    $("ytd-playlist-video-list-renderer #contents") ||
     $("ytd-playlist-video-list-renderer") ||
-    $("#primary") ||
-    document.scrollingElement;
-  if (scroller && scroller !== last) scroller.scrollTop += 1400;
-  window.scrollBy(0, 1000);
+    $("#primary-inner") ||
+    $("#primary");
+  if (scroller instanceof HTMLElement) scroller.scrollTop += 900;
   await sleep(SCROLL_WAIT_MS);
   return getVideos().length > previousCount;
 }
 
-function nextTarget(months: Months): HTMLElement | null {
+function nextTarget(months: Months): { video: HTMLElement; id: string } | null {
   for (const video of getVideos()) {
+    const id = videoIdOf(video);
+    if (!id || skipIds.has(id)) continue;
     const age = uploadAgeDays(video);
-    if (age != null && olderThanMonths(age, months)) return video;
+    if (age != null && olderThanMonths(age, months)) return { video, id };
   }
   return null;
 }
@@ -299,6 +318,8 @@ async function startRun(months: Months): Promise<void> {
   state.stop = false;
   state.months = months;
   state.removed = 0;
+  skipIds.clear();
+  ageCache.clear();
   setLine("Starting…");
   reportBadge(0);
   await acquireWakeLock();
@@ -307,6 +328,11 @@ async function startRun(months: Months): Promise<void> {
   let misses = 0;
   try {
     while (!state.stop) {
+      if (!isWatchLaterUrl(location.href)) {
+        setLine("Left Watch Later. Stopped.");
+        break;
+      }
+
       const videos = getVideos();
       if (!videos.length) {
         setLine("No videos on the page. Scroll the list once, then press Start.");
@@ -316,20 +342,22 @@ async function startRun(months: Months): Promise<void> {
       const hit = nextTarget(months);
       if (hit) {
         emptyScrolls = 0;
-        const title = videoTitle(hit);
+        const title = videoTitle(hit.video);
         setLine(`${state.removed} removed · ${title}`);
         try {
-          await clickRemove(hit);
+          await clickRemove(hit.video, hit.id);
+          skipIds.add(hit.id);
           remember(title);
           state.removed += 1;
           misses = 0;
           reportBadge(state.removed);
           setLine(`${state.removed} removed`);
         } catch (err) {
+          skipIds.add(hit.id);
           misses += 1;
           setLine(err instanceof Error ? err.message : String(err));
-          if (misses >= 3) throw err;
           closeMenus();
+          if (misses >= 5) throw err;
           await sleep(DELAY_MS);
         }
         await sleep(DELAY_MS);
