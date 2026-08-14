@@ -22,11 +22,15 @@ export function isMonths(value: number): value is Months {
   return (MONTHS as readonly number[]).includes(value);
 }
 
+function isYouTubeHost(host: string): boolean {
+  return host === "youtube.com" || host.endsWith(".youtube.com");
+}
+
 export function isWatchLaterUrl(url: string): boolean {
   try {
     const parsed = new URL(url);
     return (
-      parsed.hostname.endsWith("youtube.com") &&
+      isYouTubeHost(parsed.hostname) &&
       parsed.pathname.startsWith("/playlist") &&
       parsed.searchParams.get("list") === "WL"
     );
@@ -35,15 +39,11 @@ export function isWatchLaterUrl(url: string): boolean {
   }
 }
 
-export function isYouTubeUrl(url: string): boolean {
-  try {
-    return new URL(url).hostname.endsWith("youtube.com");
-  } catch {
-    return false;
-  }
-}
-
 declare const chrome: typeof browser | undefined;
 
 export const extApi: typeof browser =
-  typeof browser !== "undefined" ? browser : (chrome as typeof browser);
+  typeof browser !== "undefined"
+    ? browser
+    : typeof chrome !== "undefined"
+      ? chrome
+      : (undefined as unknown as typeof browser);

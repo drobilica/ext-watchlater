@@ -2,11 +2,11 @@
 
 Firefox add-on that removes videos from YouTube **Watch Later** when the video is older than 6, 12, or 24 months.
 
-YouTube does not show when you saved a video. This uses the **upload date** on each row. Removals go through YouTube’s playlist edit call so the ⋮ menu does not flash. Nothing is sent off your machine.
+YouTube does not show when you saved a video. This uses the **upload date** on each row. The playlist is read through YouTube’s same-origin browse call, then removals go through the playlist edit call in small confirmed batches so the ⋮ menu does not flash. Nothing is sent off your machine.
 
 The only UI is the **toolbar popup**. Nothing is drawn on the YouTube page. While a run is active, the toolbar icon shows a uBlock-style count for that run only.
 
-Desktop Firefox 140+ only. YouTube UI must be in English. Not for Android, and it does not unlike videos.
+Desktop Firefox 140+ only. Not for Android, and it does not unlike videos. The ⋮ menu fallback needs YouTube’s UI in English.
 
 ## Install
 
@@ -43,8 +43,8 @@ That writes `dist/clear-watch-later.xpi`. Source of truth is `src/`. Vite emits 
 Tag a version that matches `package.json` / `src/manifest.json`, then push the tag:
 
 ```bash
-git tag v2.6.0
-git push origin v2.6.0
+git tag v2.12.0
+git push origin v2.12.0
 ```
 
 GitHub Actions attaches `clear-watch-later-<version>.xpi` and a source zip for AMO.

@@ -6,9 +6,9 @@
 
 The UI is the toolbar popup. The content script does not inject a page overlay. A non-persistent background script only updates the toolbar badge during a run.
 
-It removes items from the Watch Later playlist (`WL`) using YouTube’s same-origin playlist edit call in the page session. If that fails, it falls back to the ⋮ → Remove control. It does not use the public YouTube Data API, does not send data off the device, and does not unlike videos.
+It lists Watch Later (`WL`) with YouTube’s same-origin browse call (`browseId` `VLWL` plus continuation tokens) and removes matches with the same-origin playlist edit call, up to 50 actions per request. HTTP 200 is not enough; the body must be `STATUS_SUCCEEDED`. If browse is unavailable or a page fetch is truncated, it walks the visible list. A failed batch is halved, then retried as a single edit, then the ⋮ → Remove control. It does not use the public YouTube Data API, does not send data off the device, and does not unlike videos.
 
-YouTube’s UI must be in **English** for the Remove menu item to be found.
+The ⋮ menu fallback needs YouTube’s UI in **English**. The browse / edit path does not.
 
 Desktop Firefox only. Not supported on Android. There is no `gecko_android` key. addons-linter may warn that Android 140 predates `data_collection_permissions`; ignore that and do **not** enable Firefox for Android on the listing.
 
@@ -52,3 +52,18 @@ No production dependencies. Dev dependencies are fetched only from the npm regis
 ## Add-on ID
 
 `clear-watch-later@yt-cleanup` — keep this ID for all updates.
+
+## AMO source notes
+
+```
+See REVIEWERS.md.
+
+Build: Node.js LTS, pnpm 10.15.0
+  pnpm install
+  pnpm xpi
+
+Review src/*.ts. Vite emits build/extension/.
+Add-on ID: clear-watch-later@yt-cleanup
+Desktop Firefox only. Do not enable Firefox for Android.
+No remote code. No data leaves the device.
+```

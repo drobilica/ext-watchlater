@@ -1,7 +1,7 @@
 {
   "name": "ext-watchlater",
   "private": true,
-  "version": "2.10.0",
+  "version": "2.12.0",
   "description": "WatchLater Cleaner for YT — remove old videos from YouTube Watch Later.",
   "license": "MIT",
   "repository": {
@@ -15,7 +15,7 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "test": "node --experimental-strip-types --test src/age.test.ts",
+    "test": "node --experimental-strip-types --test src/*.test.ts",
     "lint:css": "stylelint \"src/**/*.css\"",
     "lint:amo": "addons-linter build/extension --min-manifest-version 3 --max-manifest-version 3",
     "xpi": "pnpm build && python3 pack.py && pnpm lint:amo"
