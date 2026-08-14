@@ -1,0 +1,53 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint:css
+      - run: pnpm exec tsc --noEmit
+      - run: pnpm xpi
+
+      - name: Collect AMO artifacts
+        run: |
+          set -euo pipefail
+          VERSION="$(node -p "require('./package.json').version")"
+          mkdir -p artifacts
+          cp dist/clear-watch-later.xpi "artifacts/clear-watch-later-${VERSION}.xpi"
+          git archive --format=zip --prefix=ext-watchlater/ --output="artifacts/clear-watch-later-${VERSION}-source.zip" HEAD
+          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: amo-upload
+          path: artifacts/*
+          if-no-files-found: error
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          generate_release_notes: true
+          fail_on_unmatched_files: true

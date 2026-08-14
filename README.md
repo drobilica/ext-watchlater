@@ -36,6 +36,22 @@ pnpm xpi
 
 That writes `dist/clear-watch-later.xpi`. Source of truth is `src/`. Vite emits the unpacked add-on to `build/extension/`.
 
+## Release
+
+Tag a version that matches `package.json` / `src/manifest.json`, then push the tag:
+
+```bash
+git tag v2.5.0
+git push origin v2.5.0
+```
+
+GitHub Actions builds two files on the release (and as workflow artifacts):
+
+- `clear-watch-later-<version>.xpi` — upload this to AMO
+- `clear-watch-later-<version>-source.zip` — AMO source submission (Vite output is bundled)
+
+You can also run the **release** workflow by hand from the Actions tab.
+
 ## Privacy
 
 No accounts, analytics, or network calls. Firefox data-collection permission is `none`. Host access is `https://www.youtube.com/playlist*` only; the panel mounts only on `list=WL`.
