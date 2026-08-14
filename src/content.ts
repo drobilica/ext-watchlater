@@ -8,10 +8,16 @@ import {
   isWatchLaterUrl,
 } from "./shared";
 
-const DELAY_MS = 1400;
+const DELAY_MS = 700;
 const MENU_WAIT_MS = 350;
 const SCROLL_WAIT_MS = 800;
 const GONE_WAIT_MS = 2500;
+
+declare function cloneInto<T>(
+  obj: T,
+  targetScope: object,
+  options?: { cloneFunctions?: boolean },
+): T;
 
 type PlaylistRendererData = {
   publishedTimeText?: {
@@ -202,6 +208,44 @@ function menuButton(video: HTMLElement): HTMLElement | null {
   return button instanceof HTMLElement ? button : null;
 }
 
+type YtCfg = { get: (key: string) => unknown };
+
+function pageWindow(): Window & { ytcfg?: YtCfg } {
+  const view = window as Window & { wrappedJSObject?: Window & { ytcfg?: YtCfg } };
+  return view.wrappedJSObject ?? view;
+}
+
+async function removeViaPlaylistEdit(videoId: string): Promise<boolean> {
+  if (!isWatchLaterUrl(location.href)) return false;
+  try {
+    const ytcfg = pageWindow().ytcfg;
+    const key = ytcfg?.get("INNERTUBE_API_KEY");
+    const context = ytcfg?.get("INNERTUBE_CONTEXT");
+    if (typeof key !== "string" || !context) return false;
+
+    const url = `https://www.youtube.com/youtubei/v1/browse/edit_playlist?prettyPrint=false&key=${encodeURIComponent(key)}`;
+    const init = {
+      method: "POST",
+      credentials: "same-origin" as const,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        context: JSON.parse(JSON.stringify(context)),
+        playlistId: "WL",
+        actions: [
+          { action: "ACTION_REMOVE_VIDEO_BY_VIDEO_ID", removedVideoId: videoId },
+        ],
+      }),
+    };
+
+    const page = pageWindow();
+    const request = typeof cloneInto === "function" ? cloneInto(init, page) : init;
+    const response = await page.fetch(url, request);
+    return Boolean(response?.ok);
+  } catch {
+    return false;
+  }
+}
+
 async function waitGone(videoId: string): Promise<boolean> {
   const deadline = Date.now() + GONE_WAIT_MS;
   while (Date.now() < deadline) {
@@ -209,6 +253,15 @@ async function waitGone(videoId: string): Promise<boolean> {
     await sleep(150);
   }
   return false;
+}
+
+async function removeFromWatchLater(video: HTMLElement, videoId: string): Promise<void> {
+  if (!isWatchLaterUrl(location.href)) throw new Error("Left Watch Later.");
+  if (await removeViaPlaylistEdit(videoId)) {
+    video.remove();
+    return;
+  }
+  await clickRemove(video, videoId);
 }
 
 async function clickRemove(video: HTMLElement, videoId: string): Promise<void> {
@@ -345,7 +398,7 @@ async function startRun(months: Months): Promise<void> {
         const title = videoTitle(hit.video);
         setLine(`${state.removed} removed · ${title}`);
         try {
-          await clickRemove(hit.video, hit.id);
+          await removeFromWatchLater(hit.video, hit.id);
           skipIds.add(hit.id);
           remember(title);
           state.removed += 1;

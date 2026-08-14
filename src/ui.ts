@@ -5,7 +5,6 @@ import {
   extApi,
   isMonths,
   isWatchLaterUrl,
-  isYouTubeUrl,
 } from "./shared";
 
 const titleEl = document.querySelector("[data-el='title']") as HTMLElement;
@@ -117,14 +116,23 @@ document.querySelector(".months")?.addEventListener("click", async (event) => {
   }
 });
 
+async function openWatchLater(): Promise<void> {
+  const playlistTabs = await extApi.tabs.query({ url: "https://www.youtube.com/playlist*" });
+  const existing = playlistTabs.find((tab) => isWatchLaterUrl(tab.url ?? ""));
+  if (existing?.id != null) {
+    await extApi.tabs.update(existing.id, { active: true });
+    if (existing.windowId != null) {
+      await extApi.windows.update(existing.windowId, { focused: true });
+    }
+    return;
+  }
+  await extApi.windows.create({ url: WL_URL, focused: true });
+}
+
 actionEl.addEventListener("click", async () => {
   const tab = await activeTab();
   if (mode === "open") {
-    if (tab && isYouTubeUrl(tab.url ?? "")) {
-      await extApi.tabs.update(tab.id!, { url: WL_URL });
-    } else {
-      await extApi.tabs.create({ url: WL_URL });
-    }
+    await openWatchLater();
     window.close();
     return;
   }

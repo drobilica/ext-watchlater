@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "WatchLater Cleaner for YT",
-  "version": "2.9.0",
+  "version": "2.10.0",
   "description": "Remove old videos from YouTube Watch Later.",
   "browser_specific_settings": {
     "gecko": {

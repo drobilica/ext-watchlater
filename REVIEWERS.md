@@ -6,7 +6,7 @@
 
 The UI is the toolbar popup. The content script does not inject a page overlay. A non-persistent background script only updates the toolbar badge during a run.
 
-It does this by clicking YouTube’s own playlist ⋮ → **Remove from Watch later** control. It does not call the YouTube Data API, does not send data off the device, and does not unlike videos.
+It removes items from the Watch Later playlist (`WL`) using YouTube’s same-origin playlist edit call in the page session. If that fails, it falls back to the ⋮ → Remove control. It does not use the public YouTube Data API, does not send data off the device, and does not unlike videos.
 
 YouTube’s UI must be in **English** for the Remove menu item to be found.
 
